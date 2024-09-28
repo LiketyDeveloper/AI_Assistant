@@ -42,7 +42,9 @@ async def set_operator_name(message: Message, state: FSMContext):
     """Set operator name"""
     
     name = message.text.strip()
-    Operator(message.chat.id, name)
+    new_operator = Operator(message.chat.id, name)
+
+    User(new_operator.user_id).delete()
     
     await message.answer(f"{name}, Вы успешно зашли как оператор службы поддержки.", reply_markup=types.ReplyKeyboardRemove())
     await state.clear()
@@ -80,11 +82,11 @@ async def user_request_handler(message: Message, state: FSMContext):
             await message.answer(text="Ищем доступного оператора...")
             
             ## Getting free operator
-            handling_operator = Operator.free_operator
+            handling_operator = Operator.get_free_operator()
             
             ## If free operator is found then start connection
             if handling_operator:
-                start_connection(message.bot, handling_operator, user)
+                await start_connection(message.bot, handling_operator, user)
                 
             ## Otherwise alert that there are no operators
             else:
@@ -190,3 +192,23 @@ async def send_ai_hint(bot: Bot, operator_id: int, query: list):
     
     ## Sending hint to the operator
     await bot.send_message(operator_id, ai_hint, reply_markup=keyboards.inline.KB_SEND_ASSISTENT_MESSAGE)
+    
+    
+@router.callback_query(F.data=="send_assistent_message")
+async def send_assistent_message(callback: CallbackQuery):
+    """Send AI hint to the user assigned to the operator"""
+    
+    ## Get the operator
+    operator = Operator(callback.from_user.id)
+    
+    ## Get the user assigned to the operator
+    user = operator.operator_assigned_user
+    
+    ## Send the AI hint to the user
+    await callback.bot.send_message(user.user_id, callback.message.text)
+    
+    ## Send the AI hint to the operator
+    await callback.message.edit_text(
+        text=callback.message.text + "\n\nСообщение было отправлено",
+        reply_markup=keyboards.inline.KB_EMPTY
+    )

@@ -173,8 +173,8 @@ class Operator(BaseUser):
         
         return User(user_id=user.user_id) if user else None
 
-    @property
-    def free_operator():
+
+    def get_free_operator():
         """Get an operator that is not busy and is available to support users
         
         Returns:
