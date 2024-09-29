@@ -5,8 +5,9 @@ from aiogram.fsm.context import FSMContext
 
 from .util import BaseUser, Operator, User
 from .states import OperatorReg
-import bot.config as config
-import bot.keyboards as keyboards
+from bot import config
+from bot import keyboards
+from bot import ai
 
 from loguru import logger
 import os
@@ -71,13 +72,13 @@ async def user_request_handler(message: Message, state: FSMContext):
     ## Checking if the user is an operator
     if not user.is_operator:
         
+        user += message.text
+        
         ## If user is not handled by any operator
         if user.handled_by == 0:
             
             if not user.username:
                 user.username = message.from_user.full_name
-            
-            user += message.text
             
             await message.answer(text="Ищем доступного оператора...")
             
@@ -188,7 +189,7 @@ async def send_ai_hint(bot: Bot, operator_id: int, query: list):
     """Generating and sending AI hint to the operator"""
     
     ## Generating AI hint
-    ai_hint = f"сообщение от виртуального помощника RuTube, основанное на {query}"
+    ai_hint = ai.get_hint(query_text=" ".join(query))
     
     ## Sending hint to the operator
     await bot.send_message(operator_id, ai_hint, reply_markup=keyboards.inline.KB_SEND_ASSISTENT_MESSAGE)
