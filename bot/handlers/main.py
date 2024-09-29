@@ -187,17 +187,28 @@ async def start_connection(bot: Bot, operator: Operator, user: User = None):
     
 async def send_ai_hint(bot: Bot, operator_id: int, query: list):
     """Generating and sending AI hint to the operator"""
+    msg_text = ""
     
     ## Generating AI hint
     ai_hint = ai.get_hint(query_text=" ".join(query))
     
-    ## Sending hint to the operator
-    await bot.send_message(operator_id, ai_hint, reply_markup=keyboards.inline.KB_SEND_ASSISTENT_MESSAGE)
+    for i, text in enumerate(ai_hint):
+        msg_text += f"----{i+1}----\n{text.split("^")[1]}\n\n"
+    
+    await bot.send_message(operator_id, msg_text, reply_markup=keyboards.inline.KB_SEND_ASSISTENT_MESSAGE)
     
     
-@router.callback_query(F.data=="send_assistent_message")
+@router.callback_query(lambda c: c.data.startswith("send_assistent_message"))
 async def send_assistent_message(callback: CallbackQuery):
     """Send AI hint to the user assigned to the operator"""
+    
+    option = int(callback.data.split("|")[1])
+    
+    message = callback.message.text.replace("\n", "").split("----")
+    
+    parts = [text for i, text in enumerate(message) if i not in (0, 1, 3, 5, 7)]
+    print(f"Parts {parts}")
+    
     
     ## Get the operator
     operator = Operator(callback.from_user.id)
@@ -206,10 +217,10 @@ async def send_assistent_message(callback: CallbackQuery):
     user = operator.operator_assigned_user
     
     ## Send the AI hint to the user
-    await callback.bot.send_message(user.user_id, callback.message.text)
+    await callback.bot.send_message(user.user_id, parts[option-1])
     
     ## Send the AI hint to the operator
     await callback.message.edit_text(
-        text=callback.message.text + "\n\nСообщение было отправлено",
+        text=parts[option-1] + "\n\nСообщение было отправлено",
         reply_markup=keyboards.inline.KB_EMPTY
     )
